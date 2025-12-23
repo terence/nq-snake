@@ -1,0 +1,90 @@
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(135deg, #232526 0%, #414345 100%);
+    color: #fff;
+    min-height: 100vh;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+#game-container {
+    background: rgba(40, 44, 52, 0.95);
+    padding: 32px 40px 24px 40px;
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+}
+
+.game-header {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.game-header h1 {
+    font-size: 2.2em;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: 2px;
+    color: #7fffd4;
+    text-shadow: 0 2px 8px #222a;
+}
+
+#score {
+    font-size: 1.3em;
+    font-weight: 500;
+    color: #fff;
+    background: #222b;
+    padding: 6px 18px;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px #0003;
+}
+
+#gameCanvas {
+    background: #181c20;
+    border: 3px solid #7fffd4;
+    border-radius: 10px;
+    display: block;
+    margin-bottom: 10px;
+    box-shadow: 0 4px 24px #0007;
+    transition: border-color 0.2s;
+}
+
+.game-footer {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+}
+
+#restartBtn {
+    background: #7fffd4;
+    color: #222;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 20px;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 8px #0002;
+    transition: background 0.2s, color 0.2s;
+}
+#restartBtn:hover {
+    background: #5ee6c1;
+    color: #111;
+}
+
+.instructions {
+    font-size: 1em;
+    color: #aaa;
+    letter-spacing: 1px;
+}
