@@ -3,4 +3,6 @@
 <path d="M20 60 Q40 40 60 60 Q50 50 40 60 Q30 70 20 60" stroke="#fff" stroke-width="6" fill="none"/>
 <circle cx="60" cy="60" r="7" fill="#fff"/>
 <circle cx="62" cy="58" r="2" fill="#22c55e"/>
+<ellipse cx="25" cy="57" rx="2" ry="2.5" fill="#fff"/>
+<ellipse cx="28" cy="59" rx="1.2" ry="1.5" fill="#222"/>
 </svg>
