@@ -31,6 +31,18 @@ function resizeCanvasToViewport() {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
+function clampInt(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+}
+
+function remapPointToNewGrid(point, oldCols, oldRows, newCols, newRows) {
+    const oldCol = point.x / box;
+    const oldRow = point.y / box;
+    const newCol = clampInt(Math.round((oldCol / Math.max(1, oldCols - 1)) * (newCols - 1)), 0, newCols - 1);
+    const newRow = clampInt(Math.round((oldRow / Math.max(1, oldRows - 1)) * (newRows - 1)), 0, newRows - 1);
+    return { x: newCol * box, y: newRow * box };
+}
+
 function resetGame() {
     resizeCanvasToViewport();
 
@@ -174,16 +186,21 @@ let swipeStartY = null;
 let swipeActive = false;
 const SWIPE_MIN_DISTANCE = 18;
 
-function onPointerDown(e) {
-    swipeActive = true;
-    swipeStartX = e.clientX;
-    swipeStartY = e.clientY;
+function preventTouchScroll(e) {
+    if (!swipeActive) return;
+    e.preventDefault();
 }
 
-function onPointerMove(e) {
+function startSwipe(x, y) {
+    swipeActive = true;
+    swipeStartX = x;
+    swipeStartY = y;
+}
+
+function moveSwipe(x, y) {
     if (!swipeActive || swipeStartX == null || swipeStartY == null) return;
-    const dx = e.clientX - swipeStartX;
-    const dy = e.clientY - swipeStartY;
+    const dx = x - swipeStartX;
+    const dy = y - swipeStartY;
     const adx = Math.abs(dx);
     const ady = Math.abs(dy);
     if (Math.max(adx, ady) < SWIPE_MIN_DISTANCE) return;
@@ -194,33 +211,99 @@ function onPointerMove(e) {
         setDirection(dy > 0 ? 'DOWN' : 'UP');
     }
 
-    swipeStartX = e.clientX;
-    swipeStartY = e.clientY;
+    swipeStartX = x;
+    swipeStartY = y;
 }
 
-function onPointerUp() {
+function endSwipe() {
     swipeActive = false;
     swipeStartX = null;
     swipeStartY = null;
 }
 
-canvas.addEventListener('pointerdown', onPointerDown, { passive: true });
-canvas.addEventListener('pointermove', onPointerMove, { passive: true });
-canvas.addEventListener('pointerup', onPointerUp, { passive: true });
-canvas.addEventListener('pointercancel', onPointerUp, { passive: true });
+function onPointerDown(e) {
+    e.preventDefault();
+    startSwipe(e.clientX, e.clientY);
+}
 
-canvas.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
-canvas.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+function onPointerMove(e) {
+    e.preventDefault();
+    moveSwipe(e.clientX, e.clientY);
+}
+
+function onPointerUp() {
+    endSwipe();
+}
+
+canvas.addEventListener('pointerdown', onPointerDown, { passive: false });
+canvas.addEventListener('pointermove', onPointerMove, { passive: false });
+canvas.addEventListener('pointerup', onPointerUp, { passive: false });
+canvas.addEventListener('pointercancel', onPointerUp, { passive: false });
+
+canvas.addEventListener('touchstart', e => {
+    e.preventDefault();
+    const t = e.touches && e.touches[0];
+    if (!t) return;
+    startSwipe(t.clientX, t.clientY);
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+    e.preventDefault();
+    const t = e.touches && e.touches[0];
+    if (!t) return;
+    moveSwipe(t.clientX, t.clientY);
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+    e.preventDefault();
+    endSwipe();
+}, { passive: false });
+
+canvas.addEventListener('touchcancel', e => {
+    e.preventDefault();
+    endSwipe();
+}, { passive: false });
+
+document.addEventListener('touchmove', preventTouchScroll, { passive: false });
 
 window.addEventListener('resize', () => {
-    const prevWidth = canvasWidth;
-    const prevHeight = canvasHeight;
+    const oldWidth = canvasWidth;
+    const oldHeight = canvasHeight;
+    const oldCols = Math.max(1, Math.floor(oldWidth / box));
+    const oldRows = Math.max(1, Math.floor(oldHeight / box));
+
     resizeCanvasToViewport();
-    const needsReset = !snake || snake.some(s => s.x < 0 || s.y < 0 || s.x >= canvasWidth || s.y >= canvasHeight);
-    if (needsReset || prevWidth !== canvasWidth || prevHeight !== canvasHeight) {
+    const newCols = Math.max(1, Math.floor(canvasWidth / box));
+    const newRows = Math.max(1, Math.floor(canvasHeight / box));
+
+    if (!snake || snake.length === 0) {
+        draw();
+        return;
+    }
+
+    const seen = new Set();
+    const remappedSnake = [];
+    for (const segment of snake) {
+        const next = remapPointToNewGrid(segment, oldCols, oldRows, newCols, newRows);
+        const key = `${next.x},${next.y}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        remappedSnake.push(next);
+    }
+
+    if (remappedSnake.length < 3) {
         resetGame();
         return;
     }
+    snake = remappedSnake;
+
+    if (food) {
+        food = remapPointToNewGrid(food, oldCols, oldRows, newCols, newRows);
+        if (snake.some(segment => segment.x === food.x && segment.y === food.y)) {
+            food = randomPosition();
+        }
+    }
+
     draw();
 });
 
