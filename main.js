@@ -1,15 +1,46 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const box = 25;
-const canvasWidth = 800;
-const canvasHeight = 600;
+let canvasWidth = 800;
+let canvasHeight = 600;
 let snake, direction, food, score, gameInterval, isGameOver;
 
+function setDirection(nextDirection) {
+    if (isGameOver) return;
+    if (nextDirection === 'LEFT' && direction !== 'RIGHT') direction = 'LEFT';
+    if (nextDirection === 'UP' && direction !== 'DOWN') direction = 'UP';
+    if (nextDirection === 'RIGHT' && direction !== 'LEFT') direction = 'RIGHT';
+    if (nextDirection === 'DOWN' && direction !== 'UP') direction = 'DOWN';
+}
+
+function resizeCanvasToViewport() {
+    const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+    const margin = 16;
+    const maxCssWidth = Math.min(800, Math.max(240, window.innerWidth - margin * 2));
+    const maxCssHeight = Math.min(600, Math.max(240, window.innerHeight - 260));
+
+    const cols = Math.max(12, Math.floor(maxCssWidth / box));
+    const rows = Math.max(12, Math.floor(maxCssHeight / box));
+    canvasWidth = cols * box;
+    canvasHeight = rows * box;
+
+    canvas.style.width = canvasWidth + 'px';
+    canvas.style.height = canvasHeight + 'px';
+    canvas.width = Math.floor(canvasWidth * dpr);
+    canvas.height = Math.floor(canvasHeight * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
 function resetGame() {
+    resizeCanvasToViewport();
+
+    const startCol = Math.floor((canvasWidth / box) / 2);
+    const startRow = Math.floor((canvasHeight / box) / 2);
+
     snake = [
-        { x: 10 * box, y: 12 * box },
-        { x: 9 * box, y: 12 * box },
-        { x: 8 * box, y: 12 * box }
+        { x: startCol * box, y: startRow * box },
+        { x: (startCol - 1) * box, y: startRow * box },
+        { x: (startCol - 2) * box, y: startRow * box }
     ];
     direction = 'RIGHT';
     food = randomPosition();
@@ -129,11 +160,68 @@ function endGame() {
 }
 
 document.addEventListener('keydown', e => {
-    if (isGameOver) return;
-    if (e.key === 'ArrowLeft' && direction !== 'RIGHT') direction = 'LEFT';
-    if (e.key === 'ArrowUp' && direction !== 'DOWN') direction = 'UP';
-    if (e.key === 'ArrowRight' && direction !== 'LEFT') direction = 'RIGHT';
-    if (e.key === 'ArrowDown' && direction !== 'UP') direction = 'DOWN';
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        e.preventDefault();
+    }
+    if (e.key === 'ArrowLeft') setDirection('LEFT');
+    if (e.key === 'ArrowUp') setDirection('UP');
+    if (e.key === 'ArrowRight') setDirection('RIGHT');
+    if (e.key === 'ArrowDown') setDirection('DOWN');
+});
+
+let swipeStartX = null;
+let swipeStartY = null;
+let swipeActive = false;
+const SWIPE_MIN_DISTANCE = 18;
+
+function onPointerDown(e) {
+    swipeActive = true;
+    swipeStartX = e.clientX;
+    swipeStartY = e.clientY;
+}
+
+function onPointerMove(e) {
+    if (!swipeActive || swipeStartX == null || swipeStartY == null) return;
+    const dx = e.clientX - swipeStartX;
+    const dy = e.clientY - swipeStartY;
+    const adx = Math.abs(dx);
+    const ady = Math.abs(dy);
+    if (Math.max(adx, ady) < SWIPE_MIN_DISTANCE) return;
+
+    if (adx > ady) {
+        setDirection(dx > 0 ? 'RIGHT' : 'LEFT');
+    } else {
+        setDirection(dy > 0 ? 'DOWN' : 'UP');
+    }
+
+    swipeStartX = e.clientX;
+    swipeStartY = e.clientY;
+}
+
+function onPointerUp() {
+    swipeActive = false;
+    swipeStartX = null;
+    swipeStartY = null;
+}
+
+canvas.addEventListener('pointerdown', onPointerDown, { passive: true });
+canvas.addEventListener('pointermove', onPointerMove, { passive: true });
+canvas.addEventListener('pointerup', onPointerUp, { passive: true });
+canvas.addEventListener('pointercancel', onPointerUp, { passive: true });
+
+canvas.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+canvas.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+
+window.addEventListener('resize', () => {
+    const prevWidth = canvasWidth;
+    const prevHeight = canvasHeight;
+    resizeCanvasToViewport();
+    const needsReset = !snake || snake.some(s => s.x < 0 || s.y < 0 || s.x >= canvasWidth || s.y >= canvasHeight);
+    if (needsReset || prevWidth !== canvasWidth || prevHeight !== canvasHeight) {
+        resetGame();
+        return;
+    }
+    draw();
 });
 
 document.getElementById('restartBtn').addEventListener('click', resetGame);
